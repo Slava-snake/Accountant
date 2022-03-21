@@ -1,0 +1,11 @@
+12:47:23 127.0.0.1:4761 connected  -oper: [0]-paymaster
+12:47:28 Переподключение к кассе.
+12:54:45 127.0.0.1:4761 disconnected
+12:55:00 127.0.0.1:4762 connected  -oper: [0]-paymaster
+12:55:02 Переподключение к кассе.
+13:00:29 127.0.0.1:4764 connected  -oper: [0]-paymaster
+13:00:43 Касса №2 @kassa0 открыта.
+21:08:48 127.0.0.1:4768 connected  -oper: [0]-paymaster
+21:08:53 127.0.0.1:4768 disconnected
+21:10:45 127.0.0.1:4769 connected  -oper: [0]-paymaster
+21:10:48 Касса №2 @kassa0 открыта.

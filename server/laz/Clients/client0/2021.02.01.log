@@ -1,0 +1,94 @@
+00:00:32 127.0.0.1:1836 connected  -oper: [0]-slava
+00:00:50 127.0.0.1:1836 disconnected
+00:00:52 127.0.0.1:1837 connected  -oper: [0]-slava
+00:03:24 127.0.0.1:1837 disconnected
+00:04:45 127.0.0.1:1838 connected  -oper: [0]-slava
+00:05:07 127.0.0.1:1838 disconnected
+00:05:23 127.0.0.1:1839 connected  -oper: [0]-slava
+00:09:58 127.0.0.1:1839 disconnected
+00:10:04 127.0.0.1:1841 connected  -oper: [0]-slava
+00:10:20 127.0.0.1:1841 disconnected
+10:28:18 127.0.0.1:1842 connected  -oper: [0]-slava
+10:31:12 127.0.0.1:1842 disconnected
+10:32:49 127.0.0.1:1843 connected  -oper: [0]-slava
+10:33:26 127.0.0.1:1843 disconnected
+10:34:08 127.0.0.1:1845 connected  -oper: [0]-slava
+10:34:22 127.0.0.1:1845 disconnected
+11:08:23 127.0.0.1:1846 connected  -oper: [0]-slava
+11:09:45 127.0.0.1:1846 disconnected
+11:11:00 127.0.0.1:1847 connected  -oper: [0]-slava
+11:12:56 127.0.0.1:1847 disconnected
+11:12:59 127.0.0.1:1848 connected  -oper: [0]-slava
+11:13:31 127.0.0.1:1848 disconnected
+11:51:14 127.0.0.1:1850 connected  -oper: [0]-slava
+11:54:59 127.0.0.1:1850 disconnected
+12:03:54 127.0.0.1:1855 connected  -oper: [0]-slava
+12:06:39 127.0.0.1:1855 disconnected
+12:09:08 127.0.0.1:1856 connected  -oper: [0]-slava
+12:11:32 127.0.0.1:1856 disconnected
+12:11:33 127.0.0.1:1857 connected  -oper: [0]-slava
+12:12:12 127.0.0.1:1857 disconnected
+14:38:10 127.0.0.1:1860 connected  -oper: [0]-slava
+14:39:35 127.0.0.1:1860 disconnected
+16:21:15 127.0.0.1:1862 connected  -oper: [0]-slava
+16:28:58 127.0.0.1:1862 disconnected
+16:29:00 127.0.0.1:1863 connected  -oper: [0]-slava
+16:29:39 127.0.0.1:1863 disconnected
+16:29:41 127.0.0.1:1864 connected  -oper: [0]-slava
+16:32:29 127.0.0.1:1864 disconnected
+16:39:51 127.0.0.1:1866 connected  -oper: [0]-slava
+16:41:39 127.0.0.1:1866 disconnected
+16:51:46 127.0.0.1:1867 connected  -oper: [0]-slava
+16:52:03 127.0.0.1:1867 disconnected
+16:58:02 127.0.0.1:1868 connected  -oper: [0]-slava
+16:58:18 127.0.0.1:1868 disconnected
+17:03:57 127.0.0.1:1869 connected  -oper: [0]-slava
+17:04:12 127.0.0.1:1869 disconnected
+17:05:26 127.0.0.1:1870 connected  -oper: [0]-slava
+17:05:58 127.0.0.1:1870 disconnected
+17:06:36 127.0.0.1:1871 connected  -oper: [0]-slava
+17:07:09 127.0.0.1:1871 disconnected
+17:10:24 127.0.0.1:1872 connected  -oper: [0]-slava
+17:25:18 127.0.0.1:1872 disconnected
+19:31:12 127.0.0.1:1874 connected  -oper: [0]-slava
+19:32:02 127.0.0.1:1874 disconnected
+19:34:24 127.0.0.1:1876 connected  -oper: [0]-slava
+19:34:31 127.0.0.1:1876 disconnected
+19:44:05 127.0.0.1:1877 connected  -oper: [0]-slava
+19:45:04 127.0.0.1:1877 disconnected
+20:18:43 127.0.0.1:1878 connected  -oper: [0]-slava
+20:19:59 127.0.0.1:1878 disconnected
+20:20:01 127.0.0.1:1879 connected  -oper: [0]-slava
+20:20:47 127.0.0.1:1879 disconnected
+20:21:37 127.0.0.1:1880 connected  -oper: [0]-slava
+20:23:33 127.0.0.1:1880 disconnected
+20:26:26 127.0.0.1:1881 connected  -oper: [0]-slava
+20:27:14 127.0.0.1:1881 disconnected
+20:27:38 127.0.0.1:1882 connected  -oper: [0]-slava
+20:30:34 127.0.0.1:1882 disconnected
+20:36:23 127.0.0.1:1884 connected  -oper: [0]-slava
+20:37:28 127.0.0.1:1884 disconnected
+20:42:18 127.0.0.1:1885 connected  -oper: [0]-slava
+20:43:07 127.0.0.1:1885 disconnected
+20:52:03 127.0.0.1:1886 connected  -oper: [0]-slava
+20:52:34 127.0.0.1:1886 disconnected
+20:53:47 127.0.0.1:1887 connected  -oper: [0]-slava
+20:54:06 127.0.0.1:1887 disconnected
+20:54:55 127.0.0.1:1888 connected  -oper: [0]-slava
+20:56:28 127.0.0.1:1888 disconnected
+20:58:32 127.0.0.1:1889 connected  -oper: [0]-slava
+20:59:01 127.0.0.1:1889 disconnected
+21:00:53 127.0.0.1:1890 connected  -oper: [0]-slava
+21:08:21 127.0.0.1:1891 connected  -oper: [0]-slava
+21:19:31 127.0.0.1:1892 connected  -oper: [0]-slava
+21:20:48 127.0.0.1:1892 disconnected
+21:21:49 127.0.0.1:1893 connected  -oper: [0]-slava
+21:22:53 *** try another connect
+21:23:20 127.0.0.1:1895 connected  -oper: [0]-slava
+21:24:46 127.0.0.1:1896 connected  -oper: [0]-slava
+21:30:30 127.0.0.1:1897 connected  -oper: [0]-slava
+21:31:27 127.0.0.1:1897 disconnected
+21:31:29 127.0.0.1:1898 connected  -oper: [0]-slava
+21:32:13 127.0.0.1:1898 disconnected
+21:35:44 127.0.0.1:1900 connected  -oper: [0]-slava
+21:36:41 127.0.0.1:1900 disconnected

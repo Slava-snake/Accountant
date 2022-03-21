@@ -1,0 +1,72 @@
+  function GetArrCode(ar:integer; var un:tUniArr):cardinal;
+    var
+      i,nn:cardinal;
+    begin
+      Result:=0;
+      case ar of
+        Tovar  : nn:=length(L[tip].rec[un.tt.tip].num);
+        Cart   : nn:=length(L[size].rec[un.cc.size].num);
+        Prihod : nn:=length(L[agent].rec[un.pp.agent].num);
+        Rashod : nn:=length(L[agent].rec[un.pp.agent].num);
+       else
+        nn:=0;
+      end;
+      if nn=0 then exit;
+      case ar of
+        Tovar : for i:=0 to nn-1 do
+                  begin
+                    nn:=L[tip].rec[un.tt.tip].num[i];
+                    if (T[nn].rec.mat=un.tt.mat)and(T[nn].rec.firm=un.tt.firm)and(AnsiCompareText(T[nn].rec.opis,un.tt.opis)=0)and(AnsiCompareText(T[nn].rec.art,un.tt.art)=0) then
+                      begin
+                        Result:=nn;
+                        exit
+                      end;
+                  end;
+        Cart  : for i:=0 to nn-1 do
+                  begin
+                    nn:=L[size].rec[un.cc.size].num[i];
+                    if (C[nn].rec.tov=un.cc.tov)and(C[nn].rec.kol=un.cc.kol)and(C[nn].rec.ost=un.cc.ost)and
+                       (C[nn].rec.nakl=un.cc.nakl)and(C[nn].rec.pos=un.cc.pos)and(C[nn].rec.price=un.cc.price) then
+                      begin
+                        Result:=nn;
+                        exit
+                      end;
+                  end;
+        Prihod: for i:=0 to nn-1 do
+                  begin
+                    nn:=L[agent].rec[un.pp.agent].num[i];
+                    if (P[nn].rec.sum=un.pp.sum)and(P[nn].rec.data=un.pp.data)and(AnsiCompareText(P[nn].rec.num,un.pp.num)=0)and(P[nn].rec.agdat=un.pp.agdat) then
+                      begin
+                        Result:=nn;
+                        exit
+                      end;
+                  end;
+        Rashod: ;
+      end;
+    end;
+
+  function CheckA(ar:integer; ch:char; var uni:tUniArr; var ArP:tTimeKeyA):boolean;
+    begin
+      ArrLock(ar);
+      case ar of
+        Tovar : begin
+                  Result:=not T[ArP.index].Lock.Lock and(uni.tt.opis<>'')and
+                          (uni.tt.tip<>65535)and (uni.tt.mat<>65535)and(uni.tt.firm<65535)
+                          and(GetArrCode(Tovar,uni)<>0);
+                end;
+        Prihod: begin
+                  if (Arp.index>0)and(Arp.index<=A[ar].N) then
+                  case ch of
+                    'O':Result:=(not P[Arp.index].lock.lock and (P[Arp.index].rec.status=stReady))
+                              or (P[Arp.index].lock.lock and (P[Arp.index].lock.fil=CLnum) and (P[Arp.index].lock.oper=CLoper));
+                    'C':Result:=P[Arp.index].lock.lock and (P[Arp.index].rec.status=stOpen);
+                    'S',
+                    'E':REsult:=P[Arp.index].lock.lock and (P[Arp.index].lock.fil=Clnum)
+                             and (P[Arp.index].lock.oper=Cloper) and (P[Arp.index].rec.status=stOpen);
+                  end;
+                end;
+        Rashod: ;
+      end;
+      if Result then
+        Arp.tim:=ShiftKeysA(ar,Arp.index);
+    end;

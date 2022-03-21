@@ -1,0 +1,50 @@
+14:37:03 127.0.0.1:2749 connected  -oper: [0]-paymaster
+14:37:59 127.0.0.1:2749 disconnected
+14:38:07 127.0.0.1:2750 connected  -oper: [0]-paymaster
+14:39:32 127.0.0.1:2750 disconnected
+14:40:12 127.0.0.1:2751 connected  -oper: [0]-paymaster
+14:40:48 127.0.0.1:2751 disconnected
+14:41:12 127.0.0.1:2752 connected  -oper: [0]-paymaster
+16:59:51 127.0.0.1:2754 connected  -oper: [0]-paymaster
+17:01:23 127.0.0.1:2754 disconnected
+17:03:56 127.0.0.1:2757 connected  -oper: [0]-paymaster
+17:04:12 Касса №2 @kassa0 открыта.
+17:05:07 127.0.0.1:2758 connected  -oper: [0]-paymaster
+17:05:17 Касса №2 @kassa0 открыта.
+17:05:56 127.0.0.1:2759 connected  -oper: [0]-paymaster
+17:06:07 Касса №2 @kassa0 открыта.
+17:07:21 127.0.0.1:2760 connected  -oper: [0]-paymaster
+17:15:17 127.0.0.1:2761 connected  -oper: [0]-paymaster
+17:15:38 Касса №2 @kassa0 открыта.
+17:17:11 127.0.0.1:2762 connected  -oper: [0]-paymaster
+17:18:42 127.0.0.1:2763 connected  -oper: [0]-paymaster
+17:18:58 Касса №2 @kassa0 открыта.
+17:31:18 127.0.0.1:2765 connected  -oper: [0]-paymaster
+17:31:30 Касса №2 @kassa0 открыта.
+17:39:55 127.0.0.1:2765 disconnected
+17:42:14 127.0.0.1:2766 connected  -oper: [0]-paymaster
+17:42:24 Переподключение к кассе.
+17:58:13 127.0.0.1:2766 disconnected
+18:01:03 127.0.0.1:2768 connected  -oper: [0]-paymaster
+18:01:07 Касса №2 @kassa0 открыта.
+18:20:10 127.0.0.1:2768 disconnected
+18:56:50 127.0.0.1:2771 connected  -oper: [0]-paymaster
+18:56:55 Переподключение к кассе.
+18:57:47 127.0.0.1:2771 disconnected
+18:58:07 127.0.0.1:2772 connected  -oper: [0]-paymaster
+18:58:29 Переподключение к кассе.
+19:00:40 127.0.0.1:2772 disconnected
+19:01:05 127.0.0.1:2773 connected  -oper: [0]-paymaster
+19:02:01 Переподключение к кассе.
+19:08:58 127.0.0.1:2776 connected  -oper: [0]-paymaster
+19:09:03 Касса №2 @kassa0 открыта.
+19:10:16 Касса №2 закрыта. Баланс Нал= 0 Безнал= 0   Итог=0
+19:10:29 127.0.0.1:2776 disconnected
+20:41:05 127.0.0.1:2777 connected  -oper: [0]-paymaster
+20:41:15 Касса №2 @kassa0 открыта.
+20:46:09 127.0.0.1:2777 disconnected
+20:49:18 127.0.0.1:2779 connected  -oper: [0]-paymaster
+20:49:25 Переподключение к кассе.
+20:50:53 127.0.0.1:2779 disconnected
+20:51:28 127.0.0.1:2780 connected  -oper: [0]-paymaster
+20:51:35 Переподключение к кассе.

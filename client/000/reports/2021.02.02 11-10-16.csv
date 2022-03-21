@@ -1,0 +1,9 @@
+        наличие товаров  Lazurenko [1] 2021.02.02 11-10-16  
+тип;материал;фирма;артикул;описание;размер;остаток;товар;карточки
+kost;trik;Adidas;;ppp;L;12;1;1
+kost;trik;Nike;;ooo;L;12;2;2
+kost;trik;Adidas;;ppp;M;12;1;3
+kost;trik;Nike;;ooo;M;12;2;4
+kost;trik;Adidas;;lolo;S;10;3;5
+kost;trik;Adidas;;lolo;M;10;3;6
+kost;trik;Adidas;;lolo;L;10;3;7

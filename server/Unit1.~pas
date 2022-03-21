@@ -1,0 +1,2126 @@
+unit Unit1;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, ExtCtrls, FileCtrl, Grids, IdBaseComponent,
+  IdComponent, IdTCPServer, IdTCPConnection, IdTCPClient, Sockets, SyncObjs,
+  Classes, Menus, ComCtrls;
+
+const
+  clMaroon=TColor($3030AF);
+  ServerPort=8888;
+  ServRun=8887;
+
+  servFile  = 'ServName.sb';
+
+  nListStep=64;
+
+  clientDir= 'Clients\';
+  clientFile= 'clients.cnt';
+  LogError  = clientDir+'!error.cnt';
+
+  agentDir = 'Agents\';
+  firmDir  = 'Firms\';
+  tipDir   = 'Types\';
+  matDir   = 'Material\';
+  sizeDir  = 'Sizes\';
+  prihDir  = 'Prihod\';
+  rashDir  = 'Rashod\';
+  SaleDir = 'Sale\';
+  tovarDir = 'Tovars\';
+  cartDir  = 'Carts\';
+
+  rashodFile= 'rashod.cnt';
+  prihodFile= 'prihod.cnt';
+  cartFile  = 'carts.cnt';
+  numFile   = 'nums.cnt';
+  tovarFile = 'tovar.cnt';
+  listsFile = 'lists.cnt';
+  tipFile   = 'type.cnt';
+  matFile   = 'material.cnt';
+  firmFile  = 'firm.cnt';
+  sizeFile  = 'size.cnt';
+  agentFile = 'agent.cnt';
+  groupFile = 'group.cnt';
+
+  rashodIndex= 'rashod.key';
+  prihodIndex= 'prihod.key';
+  cartIndex  = 'carts.key';
+  tovarIndex = 'tovar.key';
+  tipIndex   = 'type.key';
+  matIndex   = 'material.key';
+  firmIndex  = 'firm.key';
+  sizeIndex  = 'size.key';
+  agentIndex = 'agent.key';
+
+  Tip   = 0;
+  Mat   = 1;
+  Firm  = 2;
+  Size  = 3;
+  Agent = 4;
+
+  Tovar  = 0;
+  Cart   = 1;
+  Prihod = 2;
+  Rashod = 3;
+  Sale  = 4;
+
+  stReady = 0;
+  stOpen  = 1;
+  stExec  = 2;
+  stAnn   = 3;
+
+type
+
+{  list=set of [Tip,Mat,Firm,Size,Agent];
+  arr =(tovar,cart,prihod,rashod,Sale);}
+  tNam  = string[31];            {32}
+  tArt  = string[11];            {12}
+  tOpis = string[47];            {48}
+{  tTim  = string[8]; {00:00:00}  {9}
+  tDat  = string[10];{0000.00.00}{11}
+  tFileNam = string[12];{filename.ext} {13}
+  tArrCar = array of cardinal;
+  tActualArr = record
+      changed : tDateTime;
+      count   : cardinal;
+    end;
+  tActualList = record
+      changed : tDateTime;
+      count   : word;
+    end;
+  tTimekeyL = record      {10}
+      tim   : tDateTime;
+      index : word;
+    end;
+  pTimeKeyL = ^tTKL;
+  tTKL = record
+      key       : tTimeKeyL;
+      prev,next : pTimeKeyL;
+    end;
+  pTimeKeyA = ^tTKA;
+  tTimekeyA = record      {12}
+      tim   : tDateTime;
+      index : cardinal;
+    end;
+  tTKA = record
+      key       : tTimeKeyA;
+      prev,next : pTimeKeyA;
+    end;
+  tAct = packed record   {10}
+      tim  : tDateTime;
+      fil  : byte;
+      oper : byte;
+    end;
+  tLock = packed record {4}
+      lock : boolean;
+      res1 : byte;
+      fil  : byte;
+      oper : byte;
+    end;
+
+  tTov = record {86}
+      tip,mat,firm : word;     {6}
+      art          : tArt;     {12}
+      opis         : tOpis;    {48}
+      creat        : tAct;     {10}
+      edit         : tAct;     {10}
+    end;
+  tTovar = record {106}
+      lock         : tLock;    {4}
+      key          : pTimeKeyA;  {4}
+      rec          : tTov;     {86}
+      N,S          : Cardinal; {8}
+      ca           : tArrCar;   {4}
+    end;
+  tCar = packed record  {28}
+      tov,kol,ost  : cardinal; {12}
+      nakl         : integer;  {4}
+      pos,size     : word;     {4}
+      price        : currency; {8}
+    end;
+  tCart = record  {48}
+      lock         : tLock;   {4}
+      key          : pTimeKeyA;  {4}
+      rec          : tCar;    {28}
+      N,S          : cardinal; {8}
+      ra           : tArrCar;  {4}
+    end;
+  tKont = record  {128}
+      tel          : string[31];
+      email        : string[31];
+      adr          : string[63];
+    end;
+
+  tChekPos = record {32}
+      cart, kol    : cardinal; {8}
+  {    time         : tTim;    {8}
+      price, raz   : currency; {16}
+    end;
+
+  tSale = record   {32}
+      chek         : word;     {2}
+      reserve1     : word;     {2}
+      reserve2     : integer;  {4}
+    {  time         : tTim;    {8}
+      sum,raz      : currency; {16}
+    end;
+
+  tKassa = record   {32}
+     { otkr,zakr    : tTim;     {16}
+      sum,raz      : currency; {16}
+    end;
+
+  tPrihPos =  {packed} record  {98}
+      sum          : currency; {8}
+      status       : byte;     {1}
+      data         : tDat;     {11}
+      agent        : word;     {2}
+      num          : tNam;     {32}
+      agdat        : integer;   {4}
+      creat,exec,ann,open: tAct; {40}
+    end;
+  tPrih = record    {106}
+      lock         : tLock;    {4}
+      key          : pTimeKeyA;  {4}
+      rec          : tPrihPos;  {98}
+    end;
+  tRashPos = record   {80}
+      status       : byte;     {1}
+      data         : tDat;     {11}
+      agent        : word;     {2}
+      nakl         : integer;  {4}
+      sum,raz      : currency; {16}
+      creat,exec,ann,open: tAct; {40}
+    end;
+  tRash = record   {40}
+      lock         : tLock;    {4}
+      key          : pTimeKeyA; {4}
+      rec          : tRashPos; {80}
+    end;
+{-----------------------------------------------------}
+  tListPos = record  {44}
+      nam        : tNam; {32}
+      creat,edit : tAct;  {8}
+      leafitem   : integer; {4}
+    end;
+  tListRec = record       {60}
+      lock : tLock;     {4}
+      key  : pTimeKeyL;  {4}
+      rec  : tListPos;   {40}
+      N,S  : cardinal;  {8}
+      num  : tArrCar;   {4}
+    end;
+  tList5 = record {24}
+      lock   : tLock;      {4}
+      N,S    : word;   {4}{number of elements, size of dynamic array}
+      rec    : array of tListRec; {4}
+      keys   : pTimeKeyL; {4}
+      changed: tDateTime;{8}
+    end;
+  tListSend = record
+      key  : tTimeKeyL;
+      rec  : tListPos;
+    end;
+{--------------------------------------------------------------}
+  tArr = record
+      lock   : tLock;    {4}
+      N,S    : cardinal; {8}{number of elements, first loading, Max number}
+      keys   : pTimeKeyA; {4}
+      changed: tDateTime; {8}
+    end;
+{+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}
+  tClientRec = record
+    login   : tnam;
+    name    : tOpis;
+    addr    : string[255];
+  end;
+
+  tOperRec =record
+    login   : tnam;
+    name    : tOpis;
+    dolg    : tnam;
+    rights  : cardinal;
+  end;
+
+  tClient = record
+    client : tClientRec;
+    tim    : tDateTime;
+    oper   : array of tOperRec;
+  end;
+
+  tMyNode = record {48}
+              num      : word; {number in list or $FFFF=node}
+              count    : word; {count of children}
+              first    : word; {first child}
+              prev,next: word; {sibling}
+              parent   : word; {parent node}
+              nam      : tNam; {name}{32}
+              treepos  : integer;   {4}
+            end;
+
+{+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}
+  TForm1 = class(TForm)
+    Button1: TButton;
+    BG: TStringGrid;
+    Button2: TButton;
+    Button3: TButton;
+    TCPserv: TIdTCPServer;
+    TCPrun: TIdTCPClient;
+    SG: TStringGrid;
+    PopupMenu1: TPopupMenu;
+    N1: TMenuItem;
+    N2: TMenuItem;
+    PageCtrl1: TPageControl;
+    TabSheet1: TTabSheet;
+    TabSheet2: TTabSheet;
+    TabSheet3: TTabSheet;
+    TabSheet4: TTabSheet;
+    PG: TStringGrid;
+    TabSheet5: TTabSheet;
+    TabSheet6: TTabSheet;
+    TabSheet7: TTabSheet;
+    actBut: TButton;
+    RadioGroup1: TRadioGroup;
+    TG: TStringGrid;
+    CLlist: TStringGrid;
+    AddClientButton: TButton;
+    EditClientButton: TButton;
+    TabSheet8: TTabSheet;
+    CatTip: TTreeView;
+    CatGroup: TRadioGroup;
+    CatMat: TTreeView;
+    CatSize: TTreeView;
+    CatAgent: TTreeView;
+    CatFirm: TTreeView;
+    procedure Button1Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure FormResize(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
+    procedure FormDeactivate(Sender: TObject);
+    procedure BGDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect; State: TGridDrawState);
+    procedure Button2Click(Sender: TObject);
+    procedure BGKeyPress(Sender: TObject; var Key: Char);
+    procedure Button1Enter(Sender: TObject);
+    procedure Button1Exit(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure EditMode;
+    procedure SelectMode;
+    procedure BGKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure Button3Click(Sender: TObject);
+    function  getnum(i:cardinal):cardinal;
+    procedure BDrefresh;
+    procedure TCPservExecute(AThread: TIdPeerThread);
+    procedure BGEnter(Sender: TObject);
+    procedure BGExit(Sender: TObject);
+    procedure Button2Enter(Sender: TObject);
+    procedure Button2Exit(Sender: TObject);
+    procedure Button3Enter(Sender: TObject);
+    procedure Button3Exit(Sender: TObject);
+    procedure BGDblClick(Sender: TObject);
+    procedure TCPservDisconnect(AThread: TIdPeerThread);
+    procedure TCPservConnect(AThread: TIdPeerThread);
+    procedure ButClientClick(Sender: TObject);
+    procedure N2Click(Sender: TObject);
+    procedure SGDblClick(Sender: TObject);
+    procedure PageCtrl1Change(Sender: TObject);
+    procedure actButClick(Sender: TObject);
+    procedure RadioGroup1Click(Sender: TObject);
+    procedure EditClientButtonClick(Sender: TObject);
+    procedure AddClientButtonClick(Sender: TObject);
+    procedure EditClientMode;
+    procedure SelectClientMode;
+    procedure CLlistKeyPress(Sender: TObject; var Key: Char);
+    procedure CatGroupClick(Sender: TObject);
+  private
+    { Private declarations }
+    procedure Load;
+    procedure WriteLogNo(st:string);
+    procedure WriteLog(st:string);
+    function IsClient(var Log:tNam):byte;
+  public
+    { Public declarations }
+  end;
+
+  tServBase = record
+      state : byte;
+      name  : string[254];
+      folder: string[255];
+    end;
+
+  tUniRec = record
+      key      : tTimeKeyA;
+      case integer of
+        Tovar  : (tt:tTov);
+        Cart   : (cc:tCar);
+        Prihod : (pp:tPrihPos);
+        Rashod : (rr:tRashPos);
+      end;
+  tUniArr = record
+      case integer of
+        Tovar  : (tt:tTov);
+        Cart   : (cc:tCar);
+        Prihod : (pp:tPrihPos);
+        Rashod : (rr:tRashPos);
+        Sale   : (ss:tSale);
+      end;
+
+  tShowThr = class (tThread)
+    procedure Execute; override;
+  end;
+
+var
+  Form1       : TForm1;
+  WC,BDname   : string;
+  AppAct, AppDeact : TNotifyEvent;
+  BD          : array of tServBase;
+  BDnum       : integer;
+  BDtime      : integer;
+  BGpos       : integer;
+  BGtop       : integer;
+  BGedit      : integer;
+  BDcreat     : boolean = false;
+  BDedit      : boolean = false;
+  ServerRun   : boolean = false;
+  SHOWrefresh : integer = 1000;
+  CLcount     : integer = 0;
+
+  ShowThr     : tShowThr;
+  thr         : cardinal;
+  Psort       : integer=0;
+  logsect     : TcriticalSection;
+
+  A         : array [Tovar..Sale]  of tArr;
+  LockA     : array [Tovar..Sale]  of TCriticalSection;
+  LockL     : array [Tip..Agent]   of TCriticalSection;
+  T         : array of tTovar;
+  C         : array of tCart;
+  P         : array of tPrih;
+  R         : array of tRash;
+  S         : array of tSale;
+  L         : array [Tip..Agent]   of tlist5;
+  listfile  : array [Tip..Agent]   of tFileNam=(tipFile,matFile,firmFile,sizeFile,agentFile);
+  listIndex : array [Tip..Agent]   of tFileNam=(tipIndex,matIndex,firmIndex,sizeIndex,agentIndex);
+  listDir   : array [Tip..Agent]   of tFileNam=(tipDir,matdir,firmDir,sizeDir,agentDir);
+  arrFile   : array [Tovar..Rashod]of tFileName=(tovarFile,CartFile,prihodFile,rashodFile);
+  arrIndex  : array [Tovar..Rashod]of tFileName=(tovarIndex,CartIndex,prihodIndex,rashodIndex);
+  arrDir    : array [Tovar..Sale]  of tFileNam=(tovarDir,CartDir,prihDir,rashDir,SaleDir);
+
+  ChanAr:array[Tovar..Sale]of tDateTime;
+  ChanLi:array[Tip..Agent] of tDateTime;
+  Clients     : array[1..255] of Tclient;
+  ClientCount : byte;
+  EditClient: boolean ;
+
+  threadvar CLpos  : integer;
+  threadvar CLlock : tLock;
+  threadvar CLname : tNam;
+  threadvar CLnum  : byte;
+  threadvar CLoper : byte;
+  threadvar CLerr  : boolean;
+  threadvar CLitself  : boolean;
+
+implementation
+
+uses Unit2;
+
+{$R *.dfm}
+
+procedure LoadArr(fn:TFileNam; var X; F,C,S:cardinal);{first,count,sizeof}
+  var
+    fi:file;
+  begin
+    assignfile(fi,fn);
+    reset(fi,s);
+    seek(fi,f);
+    blockread(fi,X,c);
+    closefile(fi);
+  end;
+
+procedure SaveArr(fn:TFileNam; var X; f,c,s:cardinal);
+  var                             {first,count,size}
+    fi:file;
+  begin
+    filemode:=2;
+    assignfile(fi,fn);
+    reset(fi,s);
+    seek(fi,f);
+    blockwrite(fi,X,c);
+    closefile(fi);
+  end;
+
+procedure SaveSome0(fn:TFileNam; c:cardinal);
+  var                             {first,count,size}
+    fi:integer;
+    x:byte;
+  begin
+    if c<=0 then exit;
+    fi:=fileopen(fn,1);
+    x:=0;
+    repeat
+      filewrite(fi,x,1);
+      dec(c);
+    until c=0;
+    fileclose(fi);
+  end;
+
+function IntToArt(n:integer):tArt;
+  begin
+    Result:=format('%9.9d',[n]);
+  end;
+{_____________________________________________________________________________}
+
+function TForm1.IsClient(var Log:tNam):byte;
+  var
+    i:integer;
+  begin
+    if ClientCount>0 then
+      for i:=1 to ClientCount do
+        if Clients[i].client.login=Log then
+          begin
+            if Clients[i].tim<>0 then
+              WriteLog('*** try another connect')
+             else
+              begin
+                Result:=i;
+                exit
+              end
+          end;
+    Result:=0;
+  end;
+
+function IsChanged:boolean;
+  begin
+    Result:=BDtime<>fileage(ServFile);
+  end;
+
+function IsAccessible:boolean;
+  begin
+    Result:=((fileGetAttr(ServFile) and faReadOnly)=0);
+  end;
+
+function IsReadable:boolean;
+  begin
+    Result:=not IsAccessible;
+  end;
+
+function TForm1.getnum(i:cardinal):cardinal;
+  begin
+    Result:= StrToInt(bg.Cells[0,i])-1;
+  end;
+
+procedure TForm1.Button1Click(Sender: TObject);{run}
+  var
+    x,i:integer;
+begin
+  BDrefresh;
+  x:=getnum(BG.row);
+  if (BD[x].state>=$80) then
+    begin
+      showmessage('Already run');
+      exit
+    end;
+  if (BD[x].folder<>'') then
+    begin
+      if not directoryExists(BD[x].folder) then
+        forcedirectories(BD[x].folder);
+      if IsReadable then
+        begin
+          filesetreadonly(ServFile,false);
+          filesetreadonly(ServFile,true);
+        end;
+      BDtime:=fileage(ServFile);
+      chdir(BD[x].folder);
+      if not fileExists(NumFile) then
+        begin {new folders}
+          MkDir(agentDir);
+          MkDir(firmDir);
+          MkDir(tipDir);
+          MkDir(matDir);
+          MkDir(sizeDir);
+          MkDir(prihDir);
+          MkDir(rashDir);
+          MkDir(SaleDir);
+          MkDir(tovarDir);
+          MkDir(cartDir);
+          MkDir(clientDir);
+          fileclose(filecreate(rashodFile));
+          fileclose(filecreate(prihodFile));
+          fileclose(filecreate(cartFile));
+          fileclose(filecreate(numFile));
+          fileclose(filecreate(tovarFile));
+          fileclose(filecreate(listsFile));
+          fileclose(filecreate(groupFile));
+          fileclose(filecreate(tipFile));
+          fileclose(filecreate(matFile));
+          fileclose(filecreate(firmFile));
+          fileclose(filecreate(sizeFile));
+          fileclose(filecreate(agentFile));
+          fileclose(filecreate(clientFile));
+          fileclose(filecreate(LogError));
+          fileclose(filecreate(rashodIndex));
+          fileclose(filecreate(prihodIndex));
+          fileclose(filecreate(cartIndex));
+          fileclose(filecreate(tovarIndex));
+          fileclose(filecreate(tipIndex));
+          fileclose(filecreate(matIndex));
+          fileclose(filecreate(firmIndex));
+          fileclose(filecreate(sizeIndex));
+          fileclose(filecreate(agentIndex));
+          ClientCount:=0;
+        {create clear ARRAYs }
+          SaveSome0(numFile,(Sale-Tovar+1)*sizeof(tActualArr));
+          SaveSome0(listsFile,(Agent-Tip+1)*sizeof(tActualList));
+        end;
+      Application.OnActivate:=AppAct;
+      Application.OnDeactivate:=AppDeact;
+      bg.Hide;
+      button1.Hide;
+      button2.Hide;
+      button3.Hide;
+      CLname:='';
+{_____________________RUN____________________________________________________________}
+      ServerRun:=true;
+      BDname:=BD[x].name;
+      inc(x);
+      form1.Caption:='['+inttostr(x)+'] - '+BDname;
+      PageCtrl1.Visible:=true;
+      FormClient.caption:=BDname+' - Clients';
+      inc(x,ServerPort);
+      TCPserv.Bindings.DefaultPort:=x;
+      for i:=0 to TCPserv.Bindings.Count-1 do
+        begin
+          TCPserv.Bindings.Items[i].Port:=x;
+        end;
+      load;
+      for i:=Tovar to Sale do LockA[i]:=TCriticalSection.Create;
+      for i:=Tip to Agent do LockL[i]:=TCriticalSection.Create;
+      logsect:=TcriticalSection.Create;
+      TCPserv.Active:=true;
+      Form1.Color:=clMoneyGreen;
+      ShowThr:=tShowThr.Create(true);
+    end
+   else
+    ShowMessage('Incorrect path.');
+end;
+
+procedure tShowThr.Execute;
+  var
+    nc,i:integer;
+    nn:cardinal;
+    pA:pTimeKeyA;
+  procedure FillRow(ro,num:integer);
+    begin
+                            with form1.PG do
+                              begin
+                                cells[0,ro]:=inttostr(num);
+                                cells[1,ro]:=P[num].rec.data;
+                                case P[num].rec.status of
+                                  stReady: cells[2,ro]:='';
+                                  stOpen : cells[2,ro]:='O';
+                                  stExec : cells[2,ro]:='*';
+                                  stAnn  : cells[2,ro]:='-'
+                                 else
+                                  cells[2,ro]:='Error';
+                                end;
+                                if P[num].lock.lock then
+                                  cells[3,ro]:=inttostr(P[num].lock.fil)+':'+inttostr(P[num].lock.oper)
+                                 else
+                                  cells[3,ro]:='';
+                                cells[4,ro]:=datetimetostr(P[num].key^.key.tim);
+                              end;
+    end;
+begin
+  FreeOnTerminate:=true;
+  FillChar(ChanAr,40,0);
+  FillChar(ChanLi,40,0);
+  while not Terminated do
+    begin
+      case Form1.PageCtrl1.ActivePageIndex of
+        1{prihod} :begin
+                    if A[prihod].lock.lock then  form1.PG.Color:=$8080F0
+                      else Form1.PG.Color:=clWindow;
+                    if ChanAr[prihod]<A[prihod].changed then
+                      begin
+                        ChanAr[prihod]:=A[prihod].changed;
+                        nc:=A[prihod].N;
+                        form1.PG.RowCount:=nc;
+                        case Psort of
+           {номер}        0: for i:=0 to nc-1 do FillRow(i,nc-i);
+           {изменен}      1: begin
+                               pA:=A[prihod].keys;
+                               i:=0;
+                               while (pA<>nil)and (i<nc) do
+                                 begin
+                                   FillRoW(i,pA^.key.index);
+                                   inc(i);
+                                   pA:=pA.next;
+                                 end;
+                             end;
+                        end;
+                      end;
+                   end;
+        2{rashod} : ;
+        4{товар}  :begin
+                    if A[tovar].lock.lock then  form1.PG.Color:=$8080F0
+                      else Form1.TG.Color:=clWindow;
+                    if ChanAr[tovar]<A[tovar].changed then
+                      begin
+                        ChanAr[tovar]:=A[tovar].changed;
+                        nc:=A[tovar].N;
+                        if nc>0 then
+                          begin
+                            form1.TG.RowCount:=nc+1;
+                            for i:=1 to nc do
+                              begin
+                                nn:=nc-i+1;
+                                Form1.TG.Cells[0,i]:=inttostr(nn);
+                                Form1.TG.Cells[1,i]:=L[tip].rec[T[nn].rec.tip].rec.nam;
+                                Form1.TG.Cells[2,i]:=L[mat].rec[T[nn].rec.mat].rec.nam;
+                                Form1.TG.Cells[3,i]:=L[firm].rec[T[nn].rec.firm].rec.nam;
+                                Form1.TG.Cells[4,i]:=T[nn].rec.art;
+                                Form1.TG.Cells[5,i]:=T[nn].rec.opis;
+                             end;
+                          end;
+                      end;
+                   end;
+      end;
+      sleep(SHOWrefresh);
+    end;
+end;
+
+procedure WriteServFile(x:integer);
+  var
+    f:file of tServBase;
+  begin
+      assignfile(f,ServFile);
+      filemode:=1;
+      reset(f);
+      seek(f,x);
+      write(f,BD[x]);
+      closefile(f);
+      filemode:=0;
+  end;
+
+procedure TForm1.EditMode;
+begin
+  filesetreadonly(ServFile,false);
+  button1.Enabled:=false;
+  button2.Enabled:=false;
+  button3.Enabled:=false;
+  bg.SetFocus;
+  bg.Options:=bg.Options + [goEditing]-[goRowSelect];
+  bg.Col:=1;
+  bg.EditorMode:=true;
+end;
+
+procedure TForm1.SelectMode;
+begin
+  if BDcreat then
+    begin
+      BDcreat:=false;
+    end;
+  if BDedit then
+    begin
+      BDedit:=false;
+    end;
+  bg.Options:=bg.Options-[goEditing]+[goRowSelect];
+  button1.Enabled:=true;
+  Button2.Enabled:=true;
+  button3.Enabled:=true;
+  filesetreadonly(ServFile,true);
+  bg.EditorMode:=false;
+  bg.SetFocus;
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  shortDateformat:='yyyy.mm.dd';
+  longtimeformat:='hh:mm:ss';
+  wc:=GetCurrentDir;
+  AppAct   := Application.OnActivate;
+  AppDeact := Application.OnDeActivate;
+  Application.OnActivate:=form1.OnActivate;
+  Application.OnDeactivate:=form1.OnDeactivate;
+  bg.ColWidths[0]:=40;
+  bgtop:=0;
+  BGpos:=0;
+  BDtime:=0;
+  CLlist.Cells[0,0]:='№';
+  Cllist.Cells[1,0]:='LogIn';
+  Cllist.Cells[2,0]:='описание';
+  Cllist.Cells[3,0]:='адрес';
+
+  if not fileexists(ServFile) then
+    begin
+      fileclose( filecreate(ServFile));{new}
+      fileSetReadOnly(ServFile,true);
+      BDnum:=0;
+    end;
+  TG.Cells[0,0]:='№';
+  TG.Cells[1,0]:='тип';
+  TG.Cells[2,0]:='материал';
+  TG.Cells[3,0]:='фирма';
+  TG.Cells[4,0]:='артикул';
+  TG.Cells[5,0]:='описание';
+end;
+
+procedure TForm1.FormResize(Sender: TObject);
+var
+  i:integer;
+begin
+  if width<256 then form1.Width:=256;
+  if height<256 then height:=256;
+  bg.ColWidths[1]:=bg.Width-bg.ColWidths[0]-7;
+  button2.Left:=(width-button2.Width-12) div 2;
+  TG.ColWidths[5]:=TG.Width-450;
+  CLlist.ColWidths[3]:=CLlist.Width;
+  for i:=0 to 2 do CLlist.ColWidths[3]:=CLlist.ColWidths[3]-CLlist.ColWidths[i]-1;
+end;
+
+procedure CycleWait;
+  begin
+    while (fileGetAttr(ServFile) and faReadOnly)=0 do
+      showmessage('List is updating...');
+  end;
+
+procedure TForm1.BDrefresh;
+  var
+    t,i:integer;
+    f:file of tServBase;
+  begin
+    if IsChanged and not ServerRun then
+      begin
+        if IsReadable then
+          begin
+            BDtime:=fileage(wc+'\'+ServFile);
+            assignfile(f,wc+'\'+ServFile);
+            filemode:=0;
+            reset(f);
+            t:=filesize(f);
+            BDnum:=t;
+            if t>0 then
+              begin
+                setlength(BD,t);
+                bg.RowCount:=t;
+                i:=0;
+                t:=0;
+                repeat
+                  read(f,BD[i]);
+                  if (BD[i].state and 1)=0 then
+                    begin
+                      bg.Cells[0,t]:=inttostr(i+1);
+                      bg.cells[1,t]:=BD[i].name;
+                      BD[i].state:=BD[i].state or $80;
+                      inc(t);
+                      TCPrun.Port:=Serverport+i+1;
+                      try TCPrun.Connect(50);  except    BD[i].state:=BD[i].state and $7f;
+                      end;
+                      TCPrun.Disconnect
+                    end;
+                  inc(i);
+                until eof(f);
+                bg.RowCount:=t;
+                bg.TopRow:=Bgtop;
+                bg.Row:=BGpos;
+              end;
+            closefile(f);
+          end
+         else
+          CycleWait;
+      end;
+  end;
+
+procedure TForm1.FormActivate(Sender: TObject);
+begin
+  if not(BDcreat or BDedit) then
+    BDrefresh
+end;
+
+procedure TForm1.FormDeactivate(Sender: TObject);
+begin
+  BGpos:=bg.Row;
+  BGtop:=bg.TopRow;
+end;
+
+procedure TForm1.BGDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect; State: TGridDrawState);
+var
+  c,i:integer;
+  b:byte;
+begin
+  if (BDnum>0) then
+    begin
+      if {bg.EditorMode and} (BDedit or BDcreat)and (bg.col<>1) and (BGedit<>bg.Row) then
+        begin
+          Selectmode;
+          {exit;}
+        end;
+      c:=0;
+      i:=getnum(Arow);
+      b:=BD[i].state;
+      if b>=128  then c:=c or $BF;
+      if (b and 2)<>0  then c:=c or $AF00;
+      if bg.Row=Arow then
+        c:=c or $D04040;
+      if c=0 then c:=clwindow;
+      bg.Canvas.Brush.Color:=c;
+      bg.Canvas.FillRect(rect);
+      bg.Canvas.TextRect(rect,rect.Left+2,rect.Top+4,bg.Cells[Acol,Arow]);
+    end
+end;
+
+procedure TForm1.Button2Click(Sender: TObject);
+begin
+  BDrefresh;
+  BDcreat:=true;
+  BGpos:=BG.Row;
+  if BDnum>0 then
+    bg.RowCount:=bg.RowCount+1;
+  bg.Row:=bg.RowCount-1;
+  bg.Cells[0,bg.Row]:=inttostr(BDnum+1);
+  bg.Cells[1,bg.Row]:='';
+  EditMode;
+end;
+
+procedure TForm1.BGKeyPress(Sender: TObject; var Key: Char);
+var
+  d:string;
+  i,x:cardinal;
+begin
+  if (key=#13) and not (BDcreat or BDedit) and (BDnum>0) then
+    button1.SetFocus;
+  if (key=#13) and (bg.Col=1) then
+    begin
+      if BDcreat then
+        d:=getcurrentdir
+       else
+        d:=BD[getnum(BGedit)].folder;
+      repeat
+      until SelectDirectory(d,[sdAllowCreate, sdPerformCreate, sdPrompt],0);
+      chdir(wc);
+      x:=getnum(Bg.row);
+      if BDnum>0 then
+      for i:=0 to BDnum-1 do
+        if i<>x then
+          begin
+            if BD[i].name=bg.Cells[1,bg.Row] then
+              begin
+                showmessage('Duplicate name');
+                exit
+              end;
+            if BD[i].folder=d then
+              begin
+                showmessage('Duplicate folder');
+                exit
+              end;
+          end;
+      if BDcreat then
+        begin
+          inc(BDnum);
+          setlength(BD,BDnum);
+          BD[x].state:=0;
+        end;
+      BD[x].name:=bg.Cells[1,BG.Row];
+      BD[x].folder:=d;
+      WriteServFile(x);
+      selectMode;
+    end;
+  if key=#27 then
+    begin
+      if BDcreat then
+        begin
+          bg.RowCount:=bg.RowCount-1;
+          bg.Row:=BGpos;
+        end
+       else
+        bg.Cells[1,bg.Row]:=BD[getnum(bg.Row)].name;
+      selectmode;
+    end;
+end;
+
+procedure TForm1.Button1Enter(Sender: TObject);
+begin
+  BDrefresh;
+end;
+
+procedure TForm1.Button1Exit(Sender: TObject);
+begin
+  BDrefresh;
+end;
+
+procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
+var
+  i,j:integer;
+  xl:pTimeKeyL;
+begin
+  TCPserv.Active:=false;
+  if BDcreat or BDedit then
+    filesetreadonly(ServFile,true);
+  if ServerRun then
+    begin
+      ShowThr.Terminate;
+      for i:=Tovar to Sale do LockA[i].Destroy;
+      for i:=Tip to Agent do LockL[i].Destroy;
+      logsect.Destroy;
+    end;
+  for i:=Tip to Agent do
+    begin
+      for j:=0 to L[i].N-1 do setlength(L[i].rec[j].num,0);
+      setlength(L[i].rec,0);
+      xl:=L[i].keys;
+      while xl<>nil do
+        begin
+          Dispose(L[i].keys);
+          xl:=xl.next;
+          L[i].keys:=xl
+        end;
+    end;
+  for i:=Tovar to Sale do
+    while A[i].keys<>nil do
+      begin
+        Dispose(A[i].keys);
+        A[i].keys:=A[i].keys.next;
+      end;
+{    begin
+      xa:=A[i].keys;
+      while xa<>nil do
+        begin
+           Dispose(A[i].keys);
+           xa:=xa.next;
+           A[i].keys:=xa;
+        end;
+    end;  }
+  for j:=1 to A[tovar].N do setlength(T[j].ca,0);
+  setlength(T,0);
+  for j:=1 to A[cart].N do setlength(C[j].ra,0);
+  setlength(C,0);
+  setlength(P,0);
+  setlength(R,0);
+  setlength(S,0);
+  setlength(Clname,0);
+  setlength(BD,0);
+end;
+
+procedure TForm1.BGKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+var
+  x:cardinal;
+begin
+  {Ctrl+E = edit}
+  if (ssCtrl in Shift) and (key=69) then
+    button3.SetFocus;
+  {Ctrl+D = delete}
+  if (ssCtrl in Shift) and (key=68) and (MessageDlg('Delete ? ',mtConfirmation,[mbYes,mbNo],0)=mrYes) then
+    begin
+      x:=getnum(Bg.Row);
+      if BD[x].state<128 then
+        begin
+          cyclewait;
+          BD[x].state:=1;
+          fileSetReadOnly(ServFile,false);
+          WriteServFile(x);
+          fileSetReadOnly(ServFile,true);
+          x:=bg.RowCount-1;
+          bg.Cols[0].Exchange(bg.Row,x);
+          bg.Cols[1].Exchange(bg.Row,x);
+          bg.RowCount:=x;
+        end
+       else
+        showmessage('Database is running now.');
+    end;
+end;
+
+procedure TForm1.Button3Click(Sender: TObject);
+begin
+  BDrefresh;
+  if BD[getnum(bg.Row)].state<128 then
+    begin
+      BDedit:=true;
+      BGedit:=BG.Row;
+      EditMode;
+    end;
+end;
+
+procedure TForm1.BGEnter(Sender: TObject);
+begin
+  BDrefresh;
+end;
+
+procedure TForm1.BGExit(Sender: TObject);
+begin
+  BDrefresh;
+end;
+
+procedure TForm1.Button2Enter(Sender: TObject);
+begin
+  BDrefresh;
+end;
+
+procedure TForm1.Button2Exit(Sender: TObject);
+begin
+  BDrefresh;
+end;
+
+procedure TForm1.Button3Enter(Sender: TObject);
+begin
+  BDrefresh;
+end;
+
+procedure TForm1.Button3Exit(Sender: TObject);
+begin
+  BDrefresh;
+end;
+
+procedure TForm1.BGDblClick(Sender: TObject);
+begin
+  Button1Click(Sender);
+end;
+
+{==================================================================================}
+
+function ReserveSize(n,block:cardinal):cardinal;
+  begin
+    Result:=(n div block +1)*block;
+  end;
+
+procedure TForm1.Load;
+  var
+    fl : file of tListPos;
+    fi : file of tTimeKeyL;
+    fa : file of tTimeKeyA;
+    ft : file of tTov;
+    fc : file of tCar;
+    fp : file of tPrihPos;
+    fr : file of tRashPos;
+    fx : file of cardinal;
+    fCL: file of tClientRec;
+    flA: file of tActualArr;
+    flL: file of tActualList;
+    nA:tActualArr;
+    nL:tActualList;
+    i,j,n:cardinal;
+    z,y:integer;
+    ff:string;
+  begin
+    {load lists: tip,mat,firm,size,agent}
+    assignfile(flL,listsFile);
+    reset(flL);
+    for z:=Tip to Agent do
+      begin
+        read(flL,nL);
+        L[z].N:=nL.count;
+        L[z].changed:=nL.changed;
+      end;
+    closefile(flL);
+
+    for z:=Tip to Agent do
+      begin
+        assignfile(fl,listFile[z]);
+        assignfile(fi,listIndex[z]);
+        reset(fl);
+        reset(fi);
+        n:=filesize(fl);
+        L[z].N:=n;
+        L[z].S:=reserveSize(N,nListStep);
+        setlength(L[z].rec,L[z].S);
+{        setlength(L[z].keys,L[z].S);}
+        if n>0 then
+          for i:=0 to n-1 do
+            begin
+              read(fl,L[z].rec[i].rec);
+{              read(fi,L[z].keys[i]);  }
+              L[z].rec[i].lock.lock:=false;
+              assignfile(fx,ListDir[z]+L[z].rec[i].rec.nam);
+              reset(fx);
+              n:=filesize(fx);
+              setlength(L[z].rec[i].num,n);
+              if n>0 then
+                for j:=0 to n-1 do
+                  read(fx,L[z].rec[i].num[j]);
+              closefile(fx);
+            end;
+        closefile(fl);
+        closefile(fi);
+      end;
+  {load numbers for tov,cart,prih,rash,sale}
+    assignfile(flA,numFile);
+    reset(flA);
+    for y:=Tovar to Rashod do
+      begin
+        read(flA,nA);
+        A[y].N:=nA.count;
+        A[y].changed:=nA.changed;
+{        setlength(A[y].keys,A[y].N+1);
+        fillChar(A[y].keys[0],sizeof(tTimeKeyA),0);
+        if A[y].N>0 then
+          begin
+            assignfile(fa,arrIndex[y]);
+            reset(fa);
+            for i:=1 to A[y].N do read(fa,A[y].keys[i]);
+            closefile(fa);
+          end;                      }
+      end;
+    closefile(flA);
+  {tovar}
+    A[tovar].S:=A[tovar].N+nListStep*2+1;
+    setlength(T,A[tovar].S);
+{    setlength(A[tovar].keys,A[tovar].S);   }
+    fillchar(T[0],sizeof(tTovar),0);
+    if A[tovar].N>0 then
+      begin
+        assignfile(ft,TovarFile);
+        reset(ft);
+        for i:=1 to A[tovar].N do
+          begin
+            read(ft,T[i].rec);
+            ff:=arrDir[tovar]+inttoArt(i);
+            if fileexists(ff) then
+              begin
+                assignfile(fx,ff);
+                reset(fx);
+                n:=filesize(fx);
+                T[i].N:=n;
+                T[i].S:=reservesize(n,nListStep*2);{*2}
+                setlength(T[i].ca,T[i].S);
+                for j:=0 to n-1 do read(fx,T[i].ca[j]);
+                closefile(fx);
+              end
+             else
+              begin
+                T[i].N:=0;
+                T[i].S:=nListStep*2;{*2}
+                setlength(T[i].ca,T[i].S);
+              end;
+          end;
+        closefile(ft);
+      end;
+  {cart}
+    A[cart].S:=A[cart].N+nListStep*4+1;
+    setlength(C,A[cart].S);
+{    setlength(A[cart].keys,A[cart].S);   }
+    fillchar(C[0],sizeof(tCart),0);
+    if A[cart].N>0 then
+      begin
+        assignfile(fc,CartFile);
+        reset(fc);
+        for i:=1 to A[Cart].N do
+          begin
+            read(fc,C[i].rec);
+            ff:=arrDir[Cart]+inttoArt(i);
+            if fileexists(ff) then
+              begin
+                assignfile(fx,ff);
+                reset(fx);
+                n:=filesize(fx);
+                C[i].N:=n;
+                C[i].S:=reservesize(n,nListStep*2);{*2}
+                setlength(C[i].ra,C[i].S);
+                for j:=0 to n-1 do read(fx,C[i].ra[j]);
+                closefile(fx);
+              end
+             else
+              begin
+                C[i].N:=0;
+                C[i].S:=nListStep div 2;
+                setlength(C[i].ra,C[i].S);
+              end;
+          end;
+        closefile(fc);
+      end;
+  {prihod}
+    A[prihod].S:=A[prihod].N+nListStep+1;
+    setlength(P,A[prihod].S);
+{    setlength(A[prihod].keys,A[prihod].S); }
+    fillchar(P[0],sizeof(tPrih),0);
+    if A[prihod].N>0 then
+      begin
+        assignfile(fp,prihodFile);
+        reset(fp);
+        for i:=1 to A[prihod].N do read(fp,P[i].rec);
+        closefile(fp);
+      end;
+  {rash}
+    A[rashod].S:=A[rashod].N+nListStep+1;
+    setlength(R,A[rashod].S);
+{    setlength(A[rashod].keys,A[rashod].S);  }
+    fillchar(R[0],sizeof(tRash),0);
+    if A[rashod].N>0 then
+      begin
+        assignfile(fr,rashodFile);
+        reset(fr);
+        for i:=1 to A[rashod].N do read(fr,R[i].rec);
+        closefile(fr);
+      end;
+  {clients}
+    assignfile(fCL,ClientFile);
+    reset(fCL);
+    ClientCount:=filesize(fCl);
+    if ClientCount>0 then
+      begin
+        CLlist.RowCount:=ClientCount+1;
+        for i:=1 to ClientCount do
+          begin
+            read(fCl,Clients[i].client);
+            Clients[i].tim:=0;
+            CLlist.Cells[0,i]:=inttostr(i);
+            CLlist.Cells[1,i]:=Clients[i].client.login;
+            CLlist.Cells[2,i]:=Clients[i].client.name;
+            CLlist.Cells[3,i]:=Clients[i].client.addr;
+          end;
+      end;
+    closefile(fCl);
+    filemode:=2;
+    EditClient:=false;
+  end;
+
+procedure TForm1.ButClientClick(Sender: TObject);
+  begin
+    FormClient.Show;
+  end;
+
+procedure TForm1.PageCtrl1Change(Sender: TObject);
+begin
+  case PageCtrl1.ActivePageIndex of
+    1..5,7 : if ShowThr.Suspended then ShowThr.Resume;
+   else
+    if not ShowThr.Suspended then ShowThr.Suspend;
+  end;
+end;
+
+
+procedure TForm1.actButClick(Sender: TObject);
+begin
+  TCPserv.Active:= not TCPserv.Active;
+  if TCPserv.Active then
+    begin
+      actbut.Caption:='dis';
+      Form1.Color:=clMoneyGreen;
+    end
+   else
+    begin
+      actbut.Caption:='Activate';
+      Form1.Color:=clMaroon;
+    end;
+end;
+
+procedure TForm1.RadioGroup1Click(Sender: TObject);
+begin
+  Psort:=RadioGroup1.ItemIndex;
+  ChanAr[prihod]:=0;
+end;
+
+
+{++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}
+  procedure ListLock(li:integer);
+    begin
+      LockL[li].Enter;
+      L[li].lock:=CLlock;
+    end;
+
+  procedure ListUnLock(li:integer);
+    begin
+      L[li].lock.lock:=false;
+      LockL[li].Leave;
+    end;
+
+  procedure ArrLock(ar:integer);
+    begin
+      LockA[ar].Enter;
+      A[ar].lock:=CLlock;
+    end;
+
+  procedure ArrUnLock(ar:integer);
+    begin
+      A[ar].lock.lock:=false;
+      LockA[ar].Leave;
+    end;
+
+  procedure WaitList(li:integer);
+    begin
+      while L[li].lock.lock do;
+    end;
+
+  procedure WaitArr(ar:integer);
+    begin
+      while A[ar].lock.lock do;
+    end;
+
+  function SizeOfArr(ar:integer):integer;
+    begin
+      case ar of
+        Tovar : Result:=sizeof(tTov);
+        1 : Result:=sizeof(tCar);
+        2 : Result:=sizeof(tPrihPos);
+        3 : Result:=sizeof(tRashPos);
+        4 : Result:=sizeof(tSale)
+       else
+        Result:=0
+      end;
+    end;
+
+  function ConvA(ch:char):integer;
+    begin
+      case ch of
+        'T' : Result:=Tovar;
+        'C' : Result:=Cart;
+        'P' : Result:=Prihod;
+        'R' : Result:=Rashod;
+        'S' : Result:=Sale
+       else
+        Result:=-1;
+      end;
+    end;
+
+  function ConvL(ch:char):integer;
+    begin
+      case ch of
+        'T' : Result:=Tip;
+        'M' : Result:=Mat;
+        'F' : Result:=Firm;
+        'S' : Result:=Size;
+        'A' : Result:=Agent
+       else
+         Result:=-1;
+      end;
+    end;
+
+
+procedure TForm1.WriteLogNo(st:string);
+var
+  logNo:textfile;
+begin
+  logsect.Enter;
+  assignfile(LogNo,LogError);
+  append(LogNo);
+  writeln(LogNo,DateTostr(date)+#32+TimeTostr(time)+#32+st);
+  closefile(LogNo);
+  logsect.Leave
+end;
+
+procedure TForm1.WriteLog(st:string);
+var
+  logfile:textfile;
+  log:string;
+begin
+  log:=clientDir+CLname+'\'+DateToStr(date)+'.log';
+  assignfile(logfile,log);
+  if fileexists(log) then
+    append(logfile)
+   else
+    rewrite(logfile);
+  writeln(logfile,TimeToStr(Time)+#32+st);
+  closefile(logfile);
+end;
+
+procedure TForm1.TCPservDisconnect(AThread: TIdPeerThread);
+var
+  n,pp,i:integer;
+  sx:string[15];
+begin
+  if CLerr then
+    begin
+      if CLname='' then writeLogNO(athread.Connection.Socket.Binding.PeerIP+':'+inttostr(athread.Connection.Socket.Binding.PeerPort)+' UNNAMED disconnected');
+      exit
+    end;
+  {unlock ALL locks}
+  for i:=Tip to Agent do if L[i].lock.lock and (L[i].lock.fil=CLnum) then
+    begin
+      L[i].lock.lock:=False;
+      ListUnlock(i);
+    end;
+  for i:=Tovar to Rashod do if A[i].lock.lock and (A[i].lock.fil=CLnum) then
+    begin
+      A[i].lock.lock:=False;
+      ArrUnlock(i);
+    end;  
+  {====================}
+  CLients[CLnum].tim:=0;
+  n:=SG.RowCount-1;
+  pp:=sg.Cols[0].IndexOf(inttostr(Athread.ThreadID));
+  if CLitself then sx:=''
+   else sx:=' by server.';
+  writelog(sg.Cells[1,pp]+':'+sg.Cells[2,pp]+' disconnected'+sx);
+  if n>0 then
+    begin
+      for i:=0 to sg.ColCount-1 do SG.Cols[i].Exchange(pp,n);
+      SG.RowCount:=n;
+    end
+   else
+    sg.Rows[0].Clear;
+end;
+
+procedure TForm1.TCPservConnect(AThread: TIdPeerThread);
+var
+  n,i:integer;
+  us:tNam;
+begin
+  if (Athread.Connection.Socket.Binding.PeerPort<>ServRun) then
+    begin
+      AThread.Connection.WriteLn(BDname);
+      Clname:=Athread.Connection.ReadLn;
+      CLoper:=Athread.Connection.ReadSmallInt;
+      us:=Athread.Connection.Readln;
+      if CLname<>'' then
+        begin
+          i:=IsClient(CLname);
+          if i<>0 then
+            begin
+              CLnum:=i;
+              Athread.Connection.WriteInteger(i);
+              Clients[i].tim:=Now;
+              n:=SG.RowCount;
+              if sg.Cells[0,0]<>'' then
+                SG.RowCount:=n+1
+               else
+                n:=0;
+              sg.Cells[0,n]:=inttostr(Athread.ThreadID);
+              sg.Cells[1,n]:=Athread.Connection.Socket.Binding.PeerIP;
+              sg.Cells[2,n]:=inttostr(Athread.Connection.Socket.Binding.Peerport);
+              sg.Cells[3,n]:=Clname;
+              sg.Cells[4,n]:=Clients[i].client.name;
+              writeLog(sg.Cells[1,n]+':'+sg.Cells[2,n]+' connected  -oper: ['+inttostr(CLoper)+']-'+us);
+              CLerr:=false;
+              CLitself:=true;
+              CLlock.lock:=true;
+              CLlock.fil:=CLnum;
+              CLlock.oper:=CLoper;
+              inc(CLcount);
+{{{{{{{{{{   Athread.Connection.ReadTimeout:=500;  }
+              exit
+            end;
+        end
+       else
+        CLname:='''UNKNOWN''';
+      writelogNO(athread.Connection.Socket.Binding.PeerIP+':'+inttostr(athread.Connection.Socket.Binding.PeerPort)+CLname+' try connect');
+    end;
+  CLerr:=true;
+  Athread.Connection.Disconnect;
+end;
+
+procedure TForm1.SGDblClick(Sender: TObject);
+var
+  tl:tList;
+  i:integer;
+  th:cardinal;
+begin
+  if sg.Cells[0,0]<>'' then th:= strtoint(sg.Cells[0,sg.row]);
+  tl:=tList.Create;
+  tl:=TCPserv.Threads.LockList;
+  for i:=0 to tl.Count-1 do
+    with TidPeerThread(tl[i]) do
+      try
+        connection.CheckForDisconnect(false,true);
+      except
+      end;
+  TCPserv.Threads.UnlockList;
+  tl.Free;
+end;
+
+procedure TForm1.N2Click(Sender: TObject);
+begin
+  if sg.Cells[0,0]<>'' then
+    thr:= strtoint(sg.Cells[0,sg.row]);
+end;
+
+{******************************************************************************************************}
+{********************************************************************************************************}
+
+procedure TForm1.TCPservExecute(AThread: TIdPeerThread);
+  var
+    sl:string;
+    nn,i,j:cardinal;
+    ti: tDateTime;
+    un:tUniArr;
+    ur:tUniRec;
+    ls:tListSend;
+    Chan:array[0..Sale]of TDateTime;
+    LiPo:tTimeKeyL;
+    ArPo:tTimeKeyA;
+    kA,kA1:pTimeKeyA;
+    kL,kL1:pTimeKeyL;
+ {-------------}
+  procedure SetNewHeadL(nH,oH:pTimeKeyL);
+    begin
+      if nH=oH then exit;
+      nH.next:=oH;
+      nH.prev:=nil;
+      if oH<>nil then oH.prev:=nH;
+    end;
+
+  function ShiftKeysL(li:integer; nz:word):tDateTime;
+    var
+      lp:pTimeKeyL;
+    begin
+      ListLock(li);
+      Result:=Now;
+      L[li].changed:=Result;
+      lp:=L[li].rec[nz].key;
+      L[li].rec[nz].rec.edit.tim:=Result;
+      L[li].rec[nz].rec.edit.fil:=CLnum;
+      L[li].rec[nz].rec.edit.oper:=CLoper;
+      if lp<>L[li].keys then
+        begin
+          if lp.prev<>nil then lp.prev.next:=lp.next;
+          if lp.next<>nil then lp.next.prev:=lp.prev;
+          SetNewHeadL(lp,L[li].keys);
+          L[li].keys:=lp;
+        end;
+      lp.key.tim:=Result;
+      ListUnlock(li);
+    end;
+
+  procedure SetNewHeadA(nH,oH:pTimeKeyA);
+    begin
+      if nH=oH then exit;
+      nH^.next:=oH;
+      nH^.prev:=nil;
+      if oH<>nil then oH^.prev:=nH;
+    end;
+
+  function ShiftKeysA(ar:integer; nz:cardinal):tDateTime;
+    var
+      ap:pTimeKeyA;
+    begin
+      Result:=Now;
+      A[ar].changed:=Result;
+      case ar of
+        Tovar  : ap:=T[nz].key;
+        Cart   : ap:=C[nz].key;
+        Prihod : ap:=P[nz].key;
+        Rashod : ap:=R[nz].key;
+      end;
+      if ap<>A[ar].keys then
+        begin
+          if ap^.prev<>nil then ap^.prev^.next:=ap^.next;
+          if ap^.next<>nil then ap^.next^.prev:=ap^.prev;
+          SetNewHeadA(ap,A[ar].keys);
+          A[ar].keys:=ap;
+        end;
+      ap.key.tim:=Result;
+    end;
+
+  procedure AAddNew(ar:integer; var LP:tTimeKeyA);
+    var
+      nn1:cardinal;
+      ap:pTimeKeyA;
+    begin
+      ArrLock(ar);
+      inc(A[ar].N);
+      nn1:=A[ar].N;
+      if nn1>A[ar].S then
+        case ar of
+          Tovar         : begin
+                            inc(A[tovar].S,nListStep*2);
+                            setlength(T,A[tovar].S);
+                          end;
+          Cart          : begin
+                            inc(A[Cart].S,nListStep*4);
+                            setlength(C,A[cart].S);
+                          end;
+          Prihod        : begin
+                            inc(A[prihod].S,nListStep);
+                            setlength(P,A[prihod].S);
+                          end;
+          Rashod        : begin
+                            inc(A[Rashod].S,nListStep);
+                            setlength(R,A[rashod].S);
+                          end;
+          Sale          : begin
+                            inc(A[Sale].S,nListStep*4);
+                            setlength(S,A[sale].S);
+                          end;
+        end;
+      new(ap);
+      ap.key.tim:=Now;
+      ap.key.index:=nn1;
+      A[ar].changed:=ap.key.tim;
+      SetNewHeadA(ap,A[ar].keys);
+      A[ar].keys:=ap;
+      LP:=ap.key;
+      case ar of
+        Tovar : begin
+                  T[nn1].key:=ap;
+                  T[nn1].rec.creat.tim:=LP.tim;
+                  T[nn1].rec.creat.fil:=CLnum;
+                  T[nn1].rec.creat.oper:=CLoper;
+                end;
+        Prihod: begin
+                  P[nn1].key:=ap;
+                  P[nn1].lock:=CLlock;
+                  P[nn1].rec.status:=stOpen;
+                  P[nn1].rec.creat.tim:=LP.tim;
+                  P[nn1].rec.creat.fil:=CLnum ;
+                  P[nn1].rec.creat.oper:=CLoper;
+                  P[nn1].rec.open:=P[nn1].rec.creat;
+                end;
+        Rashod: begin
+                  R[nn1].key:=ap;
+                  R[nn1].lock:=CLlock;
+                  R[nn1].rec.status:=stOpen;
+                  R[nn1].rec.creat.tim:=LP.tim;
+                  R[nn1].rec.creat.fil:=CLnum ;
+                  R[nn1].rec.creat.oper:=CLoper;
+                  R[nn1].rec.open:=R[nn1].rec.creat;
+                end;
+      end;
+    end;
+
+  procedure LAddNew(var LP:tTimeKeyL; ll:char; newpos:tNam);
+    var
+      li,i:integer;
+      nlp:pTimeKeyL;
+    begin
+      li:=ConvL(ll);
+      for i:=0 to L[li].N-1 do
+        if AnsiCompareText(newpos,L[li].rec[i].rec.nam)=0 then
+          begin
+            LP.tim:=0;
+            LP.index:=65535;
+            exit
+          end;
+      ListLock(li);
+      inc(L[li].N);
+      if L[li].S<L[li].N then
+        begin
+          inc(L[li].S,nListStep);
+          setlength(L[li].rec,L[li].S);
+        end;
+      LP.tim:=Now;
+      L[li].changed:=LP.tim;
+      i:=L[li].N-1;
+      LP.index:=i;
+      new(nlp);
+      nlp.prev:=nil;
+      nlp.key.tim:=lp.tim;
+      nlp.key.index:=i;
+      L[li].rec[i].key:=nlp;
+      SetNewHeadL(nlp,L[li].keys);
+      L[li].keys:=nlp;
+      L[li].rec[i].lock.lock:=false;
+      L[li].rec[i].rec.nam:=newpos;
+      L[li].rec[i].rec.creat.tim:=LP.tim;
+      L[li].rec[i].rec.creat.fil:=CLnum ;
+      L[li].rec[i].rec.creat.oper:=CLoper;
+      ListUnLock(li);
+    end;
+
+  function GetArrCode(ar:integer; var un:tUniArr):cardinal;
+    var
+      i,nn:cardinal;
+    begin
+      Result:=0;
+      case ar of
+        Tovar  : nn:=length(L[tip].rec[un.tt.tip].num);
+        Cart   : nn:=length(L[size].rec[un.cc.size].num);
+        Prihod : nn:=length(L[agent].rec[un.pp.agent].num);
+        Rashod : nn:=length(L[agent].rec[un.pp.agent].num);
+      end;
+      if nn=0 then exit;
+      case ar of
+        Tovar : for i:=0 to nn-1 do
+                  begin
+                    nn:=L[tip].rec[un.tt.tip].num[i];
+                    if (T[nn].rec.mat=un.tt.mat)and(T[nn].rec.firm=un.tt.firm)and(AnsiCompareText(T[nn].rec.opis,un.tt.opis)=0)and(AnsiCompareText(T[nn].rec.art,un.tt.art)=0) then
+                      begin
+                        Result:=nn;
+                        exit
+                      end;
+                  end;
+        Cart  : for i:=0 to nn-1 do
+                  begin
+                    nn:=L[size].rec[un.cc.size].num[i];
+                    if (C[nn].rec.tov=un.cc.tov)and(C[nn].rec.kol=un.cc.kol)and(C[nn].rec.ost=un.cc.ost)and
+                       (C[nn].rec.nakl=un.cc.nakl)and(C[nn].rec.pos=un.cc.pos)and(C[nn].rec.price=un.cc.price) then
+                      begin
+                        Result:=nn;
+                        exit
+                      end;
+                  end;
+        Prihod: for i:=0 to nn-1 do
+                  begin
+                    nn:=L[agent].rec[un.pp.agent].num[i];
+                    if (P[nn].rec.sum=un.pp.sum)and(P[nn].rec.data=un.pp.data)and(AnsiCompareText(P[nn].rec.num,un.pp.num)=0)and(P[nn].rec.agdat=un.pp.agdat) then
+                      begin
+                        Result:=nn;
+                        exit
+                      end;
+                  end;
+        Rashod: ;
+      end;
+    end;
+
+  function CheckA(ar:integer; ch:char; var uni:tUniArr; var ArP:tTimeKeyA):boolean;
+    begin
+      ArrLock(ar);
+      case ar of
+        Tovar : begin
+                  Result:=not T[ArP.index].Lock.Lock and(uni.tt.opis<>'')and
+                          (uni.tt.tip<>65535)and (uni.tt.mat<>65535)and(uni.tt.firm<65535)
+                          and(GetArrCode(Tovar,uni)<>0);
+                end;
+        Prihod: begin
+                  if (Arp.index>0)and(Arp.index<=A[ar].N) then
+                  case ch of
+                    'O':Result:=(not P[Arp.index].lock.lock and (P[Arp.index].rec.status=stReady))
+                              or (P[Arp.index].lock.lock and (P[Arp.index].lock.fil=CLnum) and (P[Arp.index].lock.oper=CLoper));
+                    'C':Result:=P[Arp.index].lock.lock and (P[Arp.index].rec.status=stOpen);
+                    'S',
+                    'E':REsult:=P[Arp.index].lock.lock and (P[Arp.index].lock.fil=Clnum)
+                             and (P[Arp.index].lock.oper=Cloper) and (P[Arp.index].rec.status=stOpen);
+                  end;
+                end;
+        Rashod: ;
+      end;
+      if Result then
+        Arp.tim:=ShiftKeysA(ar,Arp.index);
+      athread.Connection.WriteBuffer(Arp,sizeof(tTimeKeyA),true);
+    end;
+
+  procedure AddNum(X:tArrCar; nu:cardinal);
+    var
+      i:cardinal;
+    begin
+      i:=length(x);
+      setlength(X,i+1);
+      X[i]:=nu;
+    end;
+
+  procedure AddNumL(li:integer; ind:word; nu:cardinal);
+    begin
+      if ind=65535 then exit;
+      AddNum(L[li].rec[ind].num,nu);
+    end;
+
+  procedure AddNumA(ar:integer; ind,nu:cardinal);
+    begin
+      case ar of
+        Tovar : AddNum(T[ind].ca,nu);
+        Cart  : AddNum(C[ind].ra,nu);
+      end;
+    end;
+
+  procedure ExchNumL(li:integer; podel,poad:word; nu:cardinal);
+    var
+      i,j,n1:cardinal;
+    begin
+      if podel<>65535 then
+        begin
+          n1:=length(L[li].rec[podel].num);
+          if (n1<>0)  then
+            begin
+              for i:=0 to n1-2 do
+               if L[li].rec[podel].num[i]=nu then
+                 for j:=i+1 to n1-1 do L[li].rec[podel].num[j-1]:=L[li].rec[podel].num[j];
+              setlength(L[li].rec[podel].num,n1-1);
+            end;
+        end;
+      AddNumL(li,poad,nu);
+    end;
+
+
+begin  {}
+  {++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}
+  try
+     sl:=Athread.Connection.ReadLn;
+   except
+     begin
+       if (thr=Athread.ThreadID) then
+         thr:=0;
+       Athread.Connection.Disconnect;
+     end;
+    end;
+        if sl<>'' then
+          case sl[1] of
+            'T': begin {synchronize time}
+                   ti:=Now;
+                   Athread.Connection.writebuffer(ti,8,true);
+                 end;
+            'S': begin {synchronize DATA}
+                   for i:=Tip to Agent do   {lists}
+                     Chan[i]:=L[i].changed;
+                   Athread.Connection.writebuffer(Chan[0],(Agent-Tip+1)*8,true);
+                   for i:=Tovar to Sale do  {arrays}
+                     Chan[i]:=A[i].changed;
+                   Athread.Connection.writebuffer(Chan[0],(Sale-Tovar+1)*8,true);
+                 end;
+            'C': begin {Change Position}
+                   nn:=strtoint(copy(sl,5,length(sl)-4));
+                   case sl[2] of
+                     'A': begin
+                            j:=ConvA(sl[3]);
+                            ArPo.tim:=0;
+                            ArPo.index:=nn;
+                            Athread.Connection.ReadBuffer(un,SizeOfArr(j));
+                            if checkA(j,sl[4],un,ArPo) then
+                              begin
+                                case j of
+                                  Tovar : T[nn].rec:=un.tt;
+                                  Prihod: begin
+                                            case sl[4] of
+                                              'C' : begin
+                                                      P[nn].lock.lock:=false;
+                                                      P[nn].rec.status:=stReady;
+                                                      A[prihod].changed:=Now;
+                                                    end;
+                                              'O' : begin
+                                                      P[nn].lock:=CLlock;
+                                                      P[nn].rec.status:=stOpen;
+                                                      P[nn].rec.open.tim:=ArPo.tim;
+                                                      P[nn].rec.open.fil:=CLnum;
+                                                      P[nn].rec.open.oper:=CLoper;
+                                                     {may send }
+                                                    end;
+                                              'S' : begin
+                                                      {may send}
+                                                      if P[nn].rec.agent<>un.pp.agent then ExchNumL(agent,P[nn].rec.agent,un.pp.agent,nn);
+                                                      P[nn].rec:=un.pp;
+                                                      P[nn].rec.status:=stReady;
+                                                      P[nn].lock.lock:=false;
+                                                      ur.key:=ArPo;
+                                                      ur.pp:=P[nn].rec;
+                                                      Athread.Connection.WriteBuffer(ur,sizeof(tUniRec),true);
+                                                    end;
+                                              'E' : begin
+     {                                                 {exec}
+                                                      P[nn].rec.status:=stExec;
+                                                      P[nn].lock.lock:=false;
+                                                      ur.key.tim:=ShiftKeysA(prihod,nn);
+                                                      P[nn].rec.exec.tim:=ti;
+                                                      P[nn].rec.exec.fil:=CLnum;
+                                                      P[nn].rec.exec.oper:=CLoper;
+                                                      ur.key.index:=nn;
+                                                      ur.pp:=P[nn].rec;
+                                                      Athread.Connection.WriteBuffer(ur,sizeof(tUniRec),true);
+                                                    end;
+                                              end;
+                                          end;
+                                    Rashod: ;
+
+                                  end;
+                                ArrUnLock(j);
+                              end;
+                          end;
+                     'L': begin
+                            j:=ConvL(sl[3]);
+                            Athread.Connection.ReadBuffer(L[j].rec[nn].rec,sizeof(tListPos));
+                            LiPo.tim:=ShiftKeysL(j,nn);
+                            Athread.Connection.WriteBuffer(LiPo,sizeof(lipo),true);
+                          end;
+                   end;
+                 end;
+            'A': begin {add new position}
+                   case sl[2] of
+                     'A': if sl[3]<>'C' then
+                            begin
+                              j:=ConvA(sl[3]);
+                              Athread.Connection.ReadBuffer(un,SizeOfArr(j));
+                              AAddNew(j,ArPo);
+                              if Arpo.index<>0 then
+                                case sl[3] of
+                                  'T': begin
+                                         T[ArPo.index].rec:=un.tt;
+                                         AddNumL(Tip,un.tt.tip,ArPo.index);
+                                         AddNumL(Mat,un.tt.mat,ArPo.index);
+                                         AddNumL(Firm,un.tt.firm,ArPo.index);
+                                       end;
+                                  'P': begin
+                                         P[ArPo.index].rec.sum:=un.pp.sum;
+                                         P[ArPo.index].rec.data:=un.pp.data;
+
+                                         P[ArPo.index].rec.agent:=un.pp.agent;
+                                         P[ArPo.index].rec.num:=un.pp.num;
+                                         P[ArPo.index].rec.agdat:=un.pp.agdat;
+                                         AddNumL(agent,un.pp.agent,ArPo.index);
+                                       end;
+                                  'R': R[ArPo.index].rec:=un.rr;
+                                end;
+                              ArrUnLock(j);
+                              Athread.Connection.WriteBuffer(ArPo,sizeof(ArPo),true);
+                            end;
+                     'L': begin
+                            LAddNew(LiPo,sl[3],copy(sl,4,length(sl)-3));
+                            Athread.Connection.WriteBuffer(LiPo,sizeof(LiPo),true);
+                          end;
+                   end;
+                 end;
+            'G': begin {get data}
+                   case sl[2] of
+                     'A':case sl[3] of
+                           'P': begin {position}
+                                  nn:=strtoint(copy(sl,5,length(sl)-4));
+                                  case sl[4] of
+                                    'T': Athread.Connection.WriteBuffer(T[nn].rec,sizeof(tTov));
+                                    'C': Athread.Connection.WriteBuffer(C[nn].rec,sizeof(tCar));
+                                    'P': Athread.Connection.WriteBuffer(P[nn].rec,sizeof(tPrihPos));
+                                    'R': Athread.Connection.WriteBuffer(R[nn].rec,sizeof(tRashPos));
+                                  end;
+                                end;
+                           'N': begin  {counts}
+                                  nn:=A[ConvA(sl[4])].N;
+                                  Athread.Connection.WriteCardinal(nn);
+                                end;
+                           'T': begin   {time}
+                                  ti:=A[ConvA(sl[4])].changed;
+                                  Athread.Connection.WriteBuffer(ti,8,true);
+                                end;
+                           'C': begin  {changes in array [4]}
+                                  Athread.Connection.ReadBuffer(ti,8);
+                                  j:=ConvA(sl[4]);
+                                  nn:=0;
+                                  ArrLock(j);
+                                  kA:=A[j].keys;
+                                  while (kA<>nil)and(kA.key.tim>ti) do
+                                    begin
+                                      kA1:=kA;
+                                      kA:=ka.next;
+                                      inc(nn);
+                                    end;
+                                  Athread.Connection.WriteCardinal(nn);
+                                  if nn>0 then
+                                      for i:=1 to nn do
+                                        begin
+                                          ur.key:=kA1.key;
+                                          case j of
+                                            Tovar  : ur.tt:=T[kA1.key.index].rec;
+                                            Cart   : ur.cc:=C[kA1.key.index].rec;
+                                            Prihod : ur.pp:=P[kA1.key.index].rec;
+                                            Rashod : ur.rr:=R[kA1.key.index].rec;
+                                          end;
+                                          Athread.Connection.writebuffer(ur,sizeof(tUniRec),true);
+                                          kA1:=kA1.prev;
+                                        end;
+                                  ArrUnlock(j);
+                                end;
+                         end;
+                     'L':case sl[3] of
+                           'T': Athread.Connection.writebuffer(L[ConvL(sl[4])].changed,8,true);
+                           'N': Athread.Connection.writebuffer(L[ConvL(sl[4])].N,8,true);
+                           'C': begin
+                                  j:=ConvL(sl[4]);
+                                  Athread.Connection.ReadBuffer(ti,8);
+                                  nn:=0;
+                                  ListLock(j);
+                                  kL:=L[j].keys;
+                                  while (kL<>nil)and(kL.key.tim>ti) do
+                                    begin
+                                      inc(nn);
+                                      kL1:=kL;
+                                      kL:=kL.next
+                                    end;
+                                  Athread.Connection.WriteCardinal(nn);
+                                  if nn>0 then
+                                      for i:=1 to nn do
+                                        begin
+                                          ls.key:=kL1.key;
+                                          ls.rec:=L[j].rec[kL1.key.index].rec;
+                                          Athread.Connection.writebuffer(ls,sizeof(tListSend));
+                                          kL1:=kL1.prev;
+                                        end;
+                                  ListUnlock(j);
+                                end;
+                         end;
+                   end;
+                 end;
+          end
+end;
+
+  {------------------------------------------------------------------}
+
+procedure TForm1.EditClientMode;
+begin
+  CLlist.Options:=CLlist.Options-[goRowSelect]+[goEditing];
+  CLlist.EditorMode:=true;
+  CLlist.Col:=1;
+end;
+
+procedure TForm1.SelectClientMode;
+begin
+  CLlist.Options:=CLlist.Options+[goRowSelect]-[goEditing];
+  CLlist.EditorMode:=false;
+  EditClient:=false;
+end;
+
+
+procedure TForm1.AddClientButtonClick(Sender: TObject);
+begin
+  CLlist.SetFocus;
+  if ClientCount>0 then
+    CLlist.RowCount:=CLlist.RowCount+1;
+  CLlist.Row:=CLlist.RowCount-1;
+  CLlist.Cells[0,CLlist.Row]:=inttostr(CLlist.Row);
+  editClientMode;
+end;
+
+procedure TForm1.EditClientButtonClick(Sender: TObject);
+begin
+  CLlist.SetFocus;
+  EditClient:=true;
+  editClientMode;
+end;
+
+procedure WriteClient(i:integer);
+  var
+    fCL: file of tClientRec;
+  begin
+    assignfile(fCL,ClientFile);
+    reset(fCL);
+    seek(fCl,i-1);
+    write(fCL,Clients[i].client);
+    closefile(fCl);
+  end;
+
+
+procedure TForm1.CLlistKeyPress(Sender: TObject; var Key: Char);
+begin
+  if (key=#13) and CLlist.EditorMode then
+    begin
+      if Cllist.Col=3 then
+        begin
+          if CLlist.Cells[1,CLlist.Row]='' then
+            begin
+              CLlist.Col:=1;
+              exit;
+            end;
+          if EditClient then
+            renamefile(ClientDir+Clients[CLlist.Row].client.login,ClientDir+CLlist.Cells[1,CLlist.Row])
+           else
+            begin
+              inc(ClientCount);
+              Createdir(clientDir+CLlist.Cells[1,CLlist.Row]);
+            end;
+          Clients[ClientCount].client.login:=CLlist.Cells[1,CLlist.Row];
+          Clients[ClientCount].client.name:=CLlist.Cells[2,CLlist.Row];
+          Clients[ClientCount].client.addr:=CLlist.Cells[3,CLlist.Row];
+          WriteClient(ClientCount);
+          SelectClientMode;
+          exit
+        end;
+      CLlist.Col:=CLlist.Col+1;
+    end;
+  if key=#27 then
+    begin
+      if Clients[CLlist.Row].client.login='' then
+        CLlist.RowCount :=CLlist.RowCount-1
+       else
+        begin
+          CLlist.Cells[1,CLlist.Row]:=Clients[CLlist.Row].client.login;
+          CLlist.Cells[2,CLlist.Row]:=Clients[CLlist.Row].client.name;
+          CLlist.Cells[3,CLlist.Row]:=Clients[CLlist.Row].client.addr;
+        end;
+      SelectClientMode
+    end;
+end;
+
+procedure TForm1.CatGroupClick(Sender: TObject);
+begin
+  case CatGroup.ItemIndex of
+    0 : CatTip.BringToFront;
+    1 : CatMat.BringToFront;
+    2 : CatFirm.BringToFront;
+    3 : CatSize.BringToFront;
+    4 : CatAgent.BringToFront;
+  end;
+end;
+
+end.
